@@ -18,34 +18,157 @@ const int WINDOW_WIDTH = CLIENT_AREA_WIDTH + 43; //Window height to get desired 
 
 Game *game;
 
-void drawGrid(){
-    glColor3f(1.0f, 1.0f, 1.0f);    // Grey lines
+Piece PIECE_O = {
+    .rotations = {
+        0b0000011001100000,
+        0b0000011001100000,
+        0b0000011001100000,
+        0b0000011001100000
+    }
+};
 
+Piece PIECE_I = {
+    .rotations = {
+        0b0000111100000000,
+        0b0010001000100010,
+        0b0000000011110000,
+        0b0100010001000100
+    }
+};
+
+Piece PIECE_S = {
+    .rotations = {
+        0b0000011011000000,
+        0b0000010001100010,
+        0b0000011011000000,
+        0b0000010001100010
+    }
+};
+
+Piece PIECE_Z = {
+    .rotations = {
+        0b0000011000110000,
+        0b0000001001100100,
+        0b0000011000110000,
+        0b0000001001100100
+    }
+};
+
+Piece PIECE_L = {
+    .rotations = {
+        0b0100010001100000,
+        0b0000011101000000,
+        0b0000011000100000,
+        0b0000001011100000
+    }
+};
+
+Piece PIECE_J = {
+    .rotations = {
+        0b0010001001100000,
+        0b0000010001110000,
+        0b0000011001000100,
+        0b0000111000100000
+    }
+};
+
+Piece PIECE_T = {
+    .rotations = {
+        0b0000011100100000,
+        0b0010011000100000,
+        0b0000010011100000,
+        0b0100011001000000,
+    }
+};
+
+void drawGrid(){
+    glColor3f(1.0f, 1.0f, 1.0f);
     glBegin(GL_LINES);
 
     // Vertical lines
-    for (int x = 0; x <= BOARD_COLS; x++){
+    for (int x = 0; x <= game->board.cols; x++){
         glVertex2i(x, 0);
-        glVertex2i(x, BOARD_ROWS);
+        glVertex2i(x, game->board.rows);
     }
 
     // Horizontal lines
-    for (int y = 0; y <= BOARD_ROWS; y++){
+    for (int y = 0; y <= game->board.rows; y++){
         glVertex2i(0, y);
-        glVertex2i(BOARD_COLS, y);
+        glVertex2i(game->board.cols, y);
     }
     glEnd();
+}
+
+void printBoard(){
+    for(int row = 0; row < game->board.rows; row++){
+        for(int col = 0; col < game->board.cols; col++){
+            if(game->board.cells[row][col] == CELL_EMPTY){
+                printf("0,");
+            }
+            else{
+                printf("1,");
+            }
+        }
+        printf("\n");
+    }
+}
+
+void drawSquare(int x, int y){
+    glBegin(GL_QUADS);
+    glVertex2f(x,     y);
+    glVertex2f(x + 1, y);
+    glVertex2f(x + 1, y + 1);
+    glVertex2f(x,     y + 1);
+    glEnd();
+}
+
+void drawCurrentPiece(){
+    CurrentPiece currPiece = game->board.currPiece;
+    for(int row = 0; row < 4; row++){
+        for(int col = 0; col < 4; col++){
+            int shiftBit = row*4+col;
+            if(currPiece.piece.rotations[currPiece.rotation] & (0b1000000000000000 >> shiftBit)){
+                drawSquare(row+currPiece.x, col+currPiece.y);
+            }
+        }
+    }
+    
 }
 
 void initializeGame(){
     game = malloc(sizeof(Game));
     game->state = GAME_STATE_PLAYING;
     game->score = 0;
-    Board board = {
-        .rows = BOARD_ROWS,
-        .cols = BOARD_COLS
-    };
+    game->numPieces = 7;
+    game->pieces = malloc(game->numPieces * sizeof(Piece));
+    game->pieces[0] = PIECE_I;
+    game->pieces[1] = PIECE_L;
+    game->pieces[2] = PIECE_J;
+    game->pieces[3] = PIECE_T;
+    game->pieces[4] = PIECE_O;
+    game->pieces[5] = PIECE_S;
+    game->pieces[6] = PIECE_Z;
+    
+    Board board = {.rows = 20, .cols = 10};
+    board.cells = malloc(board.rows * sizeof(int *));
+    for(int row = 0; row < board.rows; row++){
+        board.cells[row] = malloc(board.cols * sizeof(int));
+        for(int col = 0; col < board.cols; col++){
+            board.cells[row][col] = CELL_EMPTY;
+        }
+    }
     game->board = board;
+}
+
+void destroyGame(){
+    for(int y = 0; y < game->board.rows; y++){
+        free(game->board.cells[y]);
+        game->board.cells[y] = NULL;
+    }
+    free(game->board.cells);
+    game->board.cells = NULL;
+    free(game);
+    game = NULL;
 }
 
 void setupGraphics(){
@@ -57,7 +180,7 @@ void setupGraphics(){
 
     glMatrixMode(GL_PROJECTION); //Telling openGL next lines affect projection matrix.
     glLoadIdentity();
-    glOrtho(0, 10, 20, 0, -1, 1); //left, right, bottom, top, near, far
+    glOrtho(0, game->board.cols, game->board.rows, 0, -1, 1); //Re-assign coords left, right, bottom, top, near, far
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 }
@@ -127,9 +250,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     CLIENT_AREA_HANDLE = GetDC(hwnd);
 
-    setupGraphics();
     initializeGame();
+    setupGraphics();
     
+    CurrentPiece currPiece = {
+        .rotation = 0,
+        .piece = game->pieces[0],
+        .x = 0,
+        .y = 0
+    };
+    game->board.currPiece = currPiece;
 
     int run = 1;
     while(run){
@@ -143,8 +273,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         drawGrid();
-
+        drawCurrentPiece();
         SwapBuffers(CLIENT_AREA_HANDLE);
     }
+    destroyGame();
     return Msg.wParam;
 }
