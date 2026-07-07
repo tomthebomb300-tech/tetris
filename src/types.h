@@ -5,12 +5,19 @@ typedef enum gameState {
     GAME_STATE_PLAYING, 
     GAME_STATE_PAUSED,
     GAME_STATE_OVER
-} GameState;
+} GAMESTATE;
 
 typedef enum cellState{
     CELL_EMPTY,
     CELL_OCCUPIED
 } CELLSTATE;
+
+typedef enum keyDown{
+    RIGHT,
+    LEFT,
+    UP,
+    DOWN
+} KEYDOWN;
 
 typedef struct piece{
     int rotations[4];
@@ -34,7 +41,7 @@ typedef struct board {
 typedef struct game {
     Piece *pieces;
     int numPieces;
-    GameState state;
+    GAMESTATE state;
     Board board;
     int score;
 } Game;

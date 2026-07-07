@@ -17,6 +17,7 @@ const int WINDOW_WIDTH = CLIENT_AREA_WIDTH + 43; //Window height to get desired 
 
 
 Game *game;
+int key_down[sizeof(KEYDOWN)];
 
 Piece PIECE_O = {
     .rotations = {
@@ -167,8 +168,39 @@ void destroyGame(){
     }
     free(game->board.cells);
     game->board.cells = NULL;
+    free(game->pieces);
+    game->pieces = NULL;
     free(game);
     game = NULL;
+}
+
+void update(){
+    if(key_down[DOWN]){
+        printf("DOWN\n");
+        key_down[DOWN]=0;
+    }
+    if(key_down[UP]){
+        printf("UP\n");
+        key_down[UP]=0;
+    }
+    if(key_down[RIGHT]){
+        printf("RIGHT\n");
+        key_down[RIGHT]=0;
+        game->board.currPiece.x = game->board.currPiece.x + 1;
+    }
+    if(key_down[LEFT]){
+        printf("LEFT\n");
+        key_down[LEFT]=0;
+        game->board.currPiece.x = game->board.currPiece.x - 1;
+    }
+}
+
+void render(){
+    glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT);
+    drawGrid();
+    drawCurrentPiece();
+    SwapBuffers(CLIENT_AREA_HANDLE);
 }
 
 void setupGraphics(){
@@ -189,6 +221,10 @@ void setupGraphics(){
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam){
     switch(msg){
         case WM_KEYDOWN:
+            if(wParam == VK_DOWN){key_down[DOWN]=1;}
+            else if(wParam == VK_UP){key_down[UP]=1;}
+            else if(wParam == VK_RIGHT){key_down[RIGHT]=1;}
+            else if(wParam == VK_LEFT){key_down[LEFT]=1;}
             break;
         case WM_CLOSE:
             DestroyWindow(hwnd);
@@ -270,11 +306,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
             TranslateMessage(&Msg);
             DispatchMessage(&Msg);
         }
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
-        drawGrid();
-        drawCurrentPiece();
-        SwapBuffers(CLIENT_AREA_HANDLE);
+        update();
+        render();
     }
     destroyGame();
     return Msg.wParam;
