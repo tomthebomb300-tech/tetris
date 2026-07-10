@@ -82,23 +82,7 @@ Piece PIECE_T = {
     }
 };
 
-void drawGrid(){
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glBegin(GL_LINES);
 
-    // Vertical lines
-    for (int x = 0; x <= game->board.cols; x++){
-        glVertex2i(x, 0);
-        glVertex2i(x, game->board.rows);
-    }
-
-    // Horizontal lines
-    for (int y = 0; y <= game->board.rows; y++){
-        glVertex2i(0, y);
-        glVertex2i(game->board.cols, y);
-    }
-    glEnd();
-}
 
 void printBoard(){
     for(int row = 0; row < game->board.rows; row++){
@@ -112,24 +96,7 @@ void printBoard(){
         }
         printf("\n");
     }
-}
-
-void drawSquare(int x, int y){
-    glBegin(GL_QUADS);
-    glVertex2f(x,     y);
-    glVertex2f(x + 1, y);
-    glVertex2f(x + 1, y + 1);
-    glVertex2f(x,     y + 1);
-    glEnd();
-}
-
-void drawCurrentPiece(){
-    for(int i = 0; i < 4; i++){
-        Coordinates c = game->board.currPiece.coords[i];
-        Coordinates drawOrigin = game->board.currPiece.drawOrigin;
-        drawSquare(drawOrigin.x + c.x, drawOrigin.y + c.y);
-    }
-    
+    printf("---------------------\n");
 }
 
 void initializeGame(){
@@ -155,6 +122,7 @@ void initializeGame(){
         }
     }
     game->board = board;
+    game->lastMoveTime = GetTickCount();
 }
 
 void destroyGame(){
@@ -170,6 +138,25 @@ void destroyGame(){
     game = NULL;
 }
 
+void createNewPiece(){
+    CurrentPiece currPiece = {
+        .rotation = 0,
+        .piece = game->pieces[rand()%7]
+    };
+    game->board.currPiece = currPiece;
+    Coordinates drawOrigin = {.x = 0, .y = 0};
+    game->board.currPiece.drawOrigin = drawOrigin;
+}
+
+void fixPieceToBoard(){
+    CurrentPiece currPiece = game->board.currPiece;
+    Coordinates drawOrigin = currPiece.drawOrigin;
+    Coordinates *coords = currPiece.coords;
+    for(int i = 0; i < 4; i++){
+        game->board.cells[drawOrigin.y + coords[i].y][drawOrigin.x + coords[i].x] = CELL_OCCUPIED;
+    }
+}
+
 int leftWallCollision(int x){
     if(x < 0){
         return 1;
@@ -177,24 +164,71 @@ int leftWallCollision(int x){
     return 0;
 }
 
-int rightWallColision(int x){
+int rightWallCollision(int x){
     if(x >= game->board.cols){
         return 1;
     }
     return 0;
 }
 
-int wallCollision(){
-    CurrentPiece currPiece = game->board.currPiece;
-    for(int i = 0; i < 4; i++){
-        if(rightWallColision(currPiece.drawOrigin.x + currPiece.coords[i].x)){
-            return 1;
-        }
-        if(leftWallCollision(currPiece.drawOrigin.x + currPiece.coords[i].x)){
-            return 1;
-        }
+int bottomWallCollision(int y){
+    if(y >= game->board.rows){
+        return 1;
     }
     return 0;
+}
+
+int layerCollision(int x, int y){
+    if(game->board.cells[x][y] == CELL_OCCUPIED){
+        return 1;
+    }
+    return 0;
+}
+
+COLLISIONTYPE collision(){
+    CurrentPiece currPiece = game->board.currPiece;
+    for(int i = 0; i < 4; i++){
+        if(rightWallCollision(currPiece.drawOrigin.x + currPiece.coords[i].x)){
+            return RIGHT_WALL;
+        }
+        if(leftWallCollision(currPiece.drawOrigin.x + currPiece.coords[i].x)){
+            return LEFT_WALL;
+        }
+        if(bottomWallCollision(currPiece.drawOrigin.y + currPiece.coords[i].y)){
+            return BOTTOM_WALL;
+        }
+        if(layerCollision(currPiece.drawOrigin.y + currPiece.coords[i].y, currPiece.drawOrigin.x + currPiece.coords[i].x)){
+            return LAYER;
+        }
+    }
+    return NONE;
+}
+
+int moveDown(){
+    if((GetTickCount() - game->lastMoveTime) >= 250){
+        game->board.currPiece.drawOrigin.y++;
+        COLLISIONTYPE collType = collision();
+        if(collType == BOTTOM_WALL || collType == LAYER){
+            game->board.currPiece.drawOrigin.y--;
+            return 0;
+        }
+        game->lastMoveTime = GetTickCount();
+    }
+    return 1;
+}
+
+void moveLeft(){
+    game->board.currPiece.drawOrigin.x--;
+    if(collision() == LEFT_WALL){
+        game->board.currPiece.drawOrigin.x++;   
+    }
+}
+
+void moveRight(){
+    game->board.currPiece.drawOrigin.x++;
+    if(collision() == RIGHT_WALL){
+        game->board.currPiece.drawOrigin.x--;   
+    }
 }
 
 void update(){
@@ -215,21 +249,14 @@ void update(){
     if(key_down[RIGHT]){
         printf("RIGHT\n");
         key_down[RIGHT]=0;
-        game->board.currPiece.drawOrigin.x++;
-        if(wallCollision()){
-            game->board.currPiece.drawOrigin.x--;   
-        }
-            
-        }
-        if(key_down[LEFT]){
-            printf("LEFT\n");
-            key_down[LEFT]=0;
-            game->board.currPiece.drawOrigin.x--;
-            if(wallCollision()){
-                game->board.currPiece.drawOrigin.x++;   
-            }
+        moveRight();
     }
-
+    if(key_down[LEFT]){
+        printf("LEFT\n");
+        key_down[LEFT]=0;
+        moveLeft();
+    }
+    
     //Adjusting tetris piece in relation to the rotation choice.
     CurrentPiece currPiece = game->board.currPiece;
     int index = 0;
@@ -241,20 +268,72 @@ void update(){
                 if(leftWallCollision(c.x + game->board.currPiece.drawOrigin.x)){
                     game->board.currPiece.drawOrigin.x++;
                 }
-                if(rightWallColision(c.x + game->board.currPiece.drawOrigin.x)){
+                if(rightWallCollision(c.x + game->board.currPiece.drawOrigin.x)){
                     game->board.currPiece.drawOrigin.x--;
                 }
                 game->board.currPiece.coords[index++] = c;
             }
         }
     }
+    
+    if(!moveDown()){//if cant move down
+        fixPieceToBoard();
+        createNewPiece();
+    }
+}
 
+void drawSquare(int x, int y){
+    glBegin(GL_QUADS);
+    glVertex2f(x,     y);
+    glVertex2f(x + 1, y);
+    glVertex2f(x + 1, y + 1);
+    glVertex2f(x,     y + 1);
+    glEnd();
+}
+
+void drawCurrentPiece(){
+    for(int i = 0; i < 4; i++){
+        Coordinates c = game->board.currPiece.coords[i];
+        Coordinates drawOrigin = game->board.currPiece.drawOrigin;
+        drawSquare(drawOrigin.x + c.x, drawOrigin.y + c.y);
+    }
+}
+
+void drawGrid(){
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glBegin(GL_LINES);
+
+    // Vertical lines
+    for (int x = 0; x <= game->board.cols; x++){
+        glVertex2i(x, 0);
+        glVertex2i(x, game->board.rows);
+    }
+
+    // Horizontal lines
+    for (int y = 0; y <= game->board.rows; y++){
+        glVertex2i(0, y);
+        glVertex2i(game->board.cols, y);
+    }
+    glEnd();
+}
+
+void drawBoard(){
+    int numRows = game->board.rows;
+    int numCols = game->board.cols; 
+    for(int row = 0; row < numRows; row++){
+        for(int col = 0; col < numCols; col++){
+            if(game->board.cells[row][col] == CELL_OCCUPIED){
+                drawSquare(col, row);
+            }
+        }
+    }
 }
 
 void render(){
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     drawGrid();
+    drawBoard();
     drawCurrentPiece();
     SwapBuffers(CLIENT_AREA_HANDLE);
 }
@@ -344,16 +423,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     initializeGame();
     setupGraphics();
+    createNewPiece();
 
-    
-    
-    CurrentPiece currPiece = {
-        .rotation = 0,
-        .piece = game->pieces[0]
-    };
-    game->board.currPiece = currPiece;
-    Coordinates drawOrigin = {.x = 0, .y = 0};
-    game->board.currPiece.drawOrigin = drawOrigin;
 
     int run = 1;
     while(run){

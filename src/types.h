@@ -12,6 +12,15 @@ typedef enum cellState{
     CELL_OCCUPIED
 } CELLSTATE;
 
+typedef enum collisionType{
+    RIGHT_WALL,
+    LEFT_WALL,
+    BOTTOM_WALL,
+    TOP_WALL,
+    NONE,
+    LAYER
+} COLLISIONTYPE;
+
 typedef enum keyDown{
     RIGHT,
     LEFT,
@@ -49,6 +58,7 @@ typedef struct game {
     GAMESTATE state;
     Board board;
     int score;
+    DWORD lastMoveTime;
 } Game;
 
 #endif
