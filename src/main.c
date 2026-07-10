@@ -59,7 +59,7 @@ Piece PIECE_L = {
     .rotations = {
         0b0100010001100000,
         0b0000011101000000,
-        0b0000011000100000,
+        0b0000011000100010,
         0b0000001011100000
     }
 };
@@ -124,14 +124,10 @@ void drawSquare(int x, int y){
 }
 
 void drawCurrentPiece(){
-    CurrentPiece currPiece = game->board.currPiece;
-    for(int row = 0; row < 4; row++){
-        for(int col = 0; col < 4; col++){
-            int shiftBit = row*4+col;
-            if(currPiece.piece.rotations[currPiece.rotation] & (0b1000000000000000 >> shiftBit)){
-                drawSquare(row+currPiece.x, col+currPiece.y);
-            }
-        }
+    for(int i = 0; i < 4; i++){
+        Coordinates c = game->board.currPiece.coords[i];
+        Coordinates drawOrigin = game->board.currPiece.drawOrigin;
+        drawSquare(drawOrigin.x + c.x, drawOrigin.y + c.y);
     }
     
 }
@@ -174,6 +170,33 @@ void destroyGame(){
     game = NULL;
 }
 
+int leftWallCollision(int x){
+    if(x < 0){
+        return 1;
+    }
+    return 0;
+}
+
+int rightWallColision(int x){
+    if(x >= game->board.cols){
+        return 1;
+    }
+    return 0;
+}
+
+int wallCollision(){
+    CurrentPiece currPiece = game->board.currPiece;
+    for(int i = 0; i < 4; i++){
+        if(rightWallColision(currPiece.drawOrigin.x + currPiece.coords[i].x)){
+            return 1;
+        }
+        if(leftWallCollision(currPiece.drawOrigin.x + currPiece.coords[i].x)){
+            return 1;
+        }
+    }
+    return 0;
+}
+
 void update(){
     if(key_down[DOWN]){
         printf("DOWN\n");
@@ -182,17 +205,50 @@ void update(){
     if(key_down[UP]){
         printf("UP\n");
         key_down[UP]=0;
+        if(game->board.currPiece.rotation == 3){
+            game->board.currPiece.rotation = 0;
+        }
+        else{
+            game->board.currPiece.rotation++;
+        }
     }
     if(key_down[RIGHT]){
         printf("RIGHT\n");
         key_down[RIGHT]=0;
-        game->board.currPiece.x = game->board.currPiece.x + 1;
+        game->board.currPiece.drawOrigin.x++;
+        if(wallCollision()){
+            game->board.currPiece.drawOrigin.x--;   
+        }
+            
+        }
+        if(key_down[LEFT]){
+            printf("LEFT\n");
+            key_down[LEFT]=0;
+            game->board.currPiece.drawOrigin.x--;
+            if(wallCollision()){
+                game->board.currPiece.drawOrigin.x++;   
+            }
     }
-    if(key_down[LEFT]){
-        printf("LEFT\n");
-        key_down[LEFT]=0;
-        game->board.currPiece.x = game->board.currPiece.x - 1;
+
+    //Adjusting tetris piece in relation to the rotation choice.
+    CurrentPiece currPiece = game->board.currPiece;
+    int index = 0;
+    for(int row = 0; row < 4; row++){
+        for(int col = 0; col < 4; col++){
+            int shiftBit = row*4+col;
+            if(currPiece.piece.rotations[currPiece.rotation] & (0b1000000000000000 >> shiftBit)){
+                Coordinates c = {.x = row, .y = col};
+                if(leftWallCollision(c.x + game->board.currPiece.drawOrigin.x)){
+                    game->board.currPiece.drawOrigin.x++;
+                }
+                if(rightWallColision(c.x + game->board.currPiece.drawOrigin.x)){
+                    game->board.currPiece.drawOrigin.x--;
+                }
+                game->board.currPiece.coords[index++] = c;
+            }
+        }
     }
+
 }
 
 void render(){
@@ -288,14 +344,16 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     initializeGame();
     setupGraphics();
+
+    
     
     CurrentPiece currPiece = {
         .rotation = 0,
-        .piece = game->pieces[0],
-        .x = 0,
-        .y = 0
+        .piece = game->pieces[0]
     };
     game->board.currPiece = currPiece;
+    Coordinates drawOrigin = {.x = 0, .y = 0};
+    game->board.currPiece.drawOrigin = drawOrigin;
 
     int run = 1;
     while(run){
