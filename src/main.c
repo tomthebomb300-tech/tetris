@@ -19,13 +19,24 @@ const int WINDOW_WIDTH = CLIENT_AREA_WIDTH + 43; //Window height to get desired 
 Game *game;
 int key_down[sizeof(KEYDOWN)];
 
+const Colour RED = {255.0f/255.0f,0,0};
+const Colour GREEN = {0,255.0f/255.0f,0};
+const Colour BLUE = {0,0,255.0f/255.0f};
+const Colour CYAN = {0,255.0f/255.0f,255.0f/255.0f};
+const Colour YELLOW = {255.0f/255.0f,255.0f/255.0f,0};
+const Colour PURPLE = {160.0f/255.0f,32.0f/255.0f,240.0f/255.0f};
+const Colour ORANGE = {255.0f/255.0f,165.0f/255.0f,0};
+
+
 Piece PIECE_O = {
     .rotations = {
         0b0000011001100000,
         0b0000011001100000,
         0b0000011001100000,
         0b0000011001100000
-    }
+    },
+    .colour = RED,
+    .cellState = CELL_RED
 };
 
 Piece PIECE_I = {
@@ -34,7 +45,9 @@ Piece PIECE_I = {
         0b0010001000100010,
         0b0000000011110000,
         0b0100010001000100
-    }
+    },
+    .colour = GREEN,
+    .cellState = CELL_GREEN
 };
 
 Piece PIECE_S = {
@@ -43,7 +56,9 @@ Piece PIECE_S = {
         0b0000010001100010,
         0b0000011011000000,
         0b0000010001100010
-    }
+    },
+    .colour = BLUE,
+    .cellState = CELL_BLUE
 };
 
 Piece PIECE_Z = {
@@ -52,7 +67,9 @@ Piece PIECE_Z = {
         0b0000001001100100,
         0b0000011000110000,
         0b0000001001100100
-    }
+    },
+    .colour = PURPLE,
+    .cellState = CELL_PURPLE
 };
 
 Piece PIECE_L = {
@@ -61,7 +78,9 @@ Piece PIECE_L = {
         0b0000011101000000,
         0b0000011000100010,
         0b0000001011100000
-    }
+    },
+    .colour = CYAN,
+    .cellState = CELL_CYAN
 };
 
 Piece PIECE_J = {
@@ -70,7 +89,9 @@ Piece PIECE_J = {
         0b0000010001110000,
         0b0000011001000100,
         0b0000111000100000
-    }
+    },
+    .colour = ORANGE,
+    .cellState = CELL_ORANGE
 };
 
 Piece PIECE_T = {
@@ -79,7 +100,9 @@ Piece PIECE_T = {
         0b0010011000100000,
         0b0000010011100000,
         0b0100011001000000,
-    }
+    },
+    .colour = YELLOW,
+    .cellState = CELL_YELLOW
 };
 
 
@@ -104,6 +127,7 @@ void initializeGame(){
     game->state = GAME_STATE_PLAYING;
     game->score = 0;
     game->numPieces = 7;
+
     game->pieces = malloc(game->numPieces * sizeof(Piece));
     game->pieces[0] = PIECE_I;
     game->pieces[1] = PIECE_L;
@@ -112,7 +136,7 @@ void initializeGame(){
     game->pieces[4] = PIECE_O;
     game->pieces[5] = PIECE_S;
     game->pieces[6] = PIECE_Z;
-    
+
     Board board = {.rows = 20, .cols = 10};
     board.cells = malloc(board.rows * sizeof(int *));
     for(int row = 0; row < board.rows; row++){
@@ -139,9 +163,10 @@ void destroyGame(){
 }
 
 void createNewPiece(){
+    int random = rand()%game->numPieces;
     CurrentPiece currPiece = {
         .rotation = 0,
-        .piece = game->pieces[rand()%7]
+        .piece = game->pieces[random],
     };
     game->board.currPiece = currPiece;
     Coordinates drawOrigin = {.x = 0, .y = 0};
@@ -153,7 +178,7 @@ void fixPieceToBoard(){
     Coordinates drawOrigin = currPiece.drawOrigin;
     Coordinates *coords = currPiece.coords;
     for(int i = 0; i < 4; i++){
-        game->board.cells[drawOrigin.y + coords[i].y][drawOrigin.x + coords[i].x] = CELL_OCCUPIED;
+        game->board.cells[drawOrigin.y + coords[i].y][drawOrigin.x + coords[i].x] = currPiece.piece.cellState;
     }
 }
 
@@ -178,8 +203,8 @@ int bottomWallCollision(int y){
     return 0;
 }
 
-int layerCollision(int x, int y){
-    if(game->board.cells[x][y] == CELL_OCCUPIED){
+int layerCollision(int y, int x){
+    if(game->board.cells[x][y] != CELL_EMPTY){
         return 1;
     }
     return 0;
@@ -197,7 +222,7 @@ COLLISIONTYPE collision(){
         if(bottomWallCollision(currPiece.drawOrigin.y + currPiece.coords[i].y)){
             return BOTTOM_WALL;
         }
-        if(layerCollision(currPiece.drawOrigin.y + currPiece.coords[i].y, currPiece.drawOrigin.x + currPiece.coords[i].x)){
+        if(layerCollision(currPiece.drawOrigin.x + currPiece.coords[i].x, currPiece.drawOrigin.y + currPiece.coords[i].y)){
             return LAYER;
         }
     }
@@ -233,11 +258,9 @@ void moveRight(){
 
 void update(){
     if(key_down[DOWN]){
-        printf("DOWN\n");
         key_down[DOWN]=0;
     }
     if(key_down[UP]){
-        printf("UP\n");
         key_down[UP]=0;
         if(game->board.currPiece.rotation == 3){
             game->board.currPiece.rotation = 0;
@@ -247,12 +270,10 @@ void update(){
         }
     }
     if(key_down[RIGHT]){
-        printf("RIGHT\n");
         key_down[RIGHT]=0;
         moveRight();
     }
     if(key_down[LEFT]){
-        printf("LEFT\n");
         key_down[LEFT]=0;
         moveLeft();
     }
@@ -282,7 +303,8 @@ void update(){
     }
 }
 
-void drawSquare(int x, int y){
+void drawSquare(int x, int y, Colour colour){
+    glColor3f(colour.red, colour.green, colour.blue);
     glBegin(GL_QUADS);
     glVertex2f(x,     y);
     glVertex2f(x + 1, y);
@@ -295,7 +317,7 @@ void drawCurrentPiece(){
     for(int i = 0; i < 4; i++){
         Coordinates c = game->board.currPiece.coords[i];
         Coordinates drawOrigin = game->board.currPiece.drawOrigin;
-        drawSquare(drawOrigin.x + c.x, drawOrigin.y + c.y);
+        drawSquare(drawOrigin.x + c.x, drawOrigin.y + c.y, game->board.currPiece.piece.colour);
     }
 }
 
@@ -322,8 +344,31 @@ void drawBoard(){
     int numCols = game->board.cols; 
     for(int row = 0; row < numRows; row++){
         for(int col = 0; col < numCols; col++){
-            if(game->board.cells[row][col] == CELL_OCCUPIED){
-                drawSquare(col, row);
+            if(game->board.cells[row][col] != CELL_EMPTY){
+                drawSquare(col, row, RED);
+                switch(game->board.cells[row][col]){
+                    case CELL_RED:
+                    drawSquare(col, row, RED);
+                    break;
+                    case CELL_GREEN:
+                    drawSquare(col, row, GREEN);
+                    break;
+                    case CELL_BLUE:
+                    drawSquare(col, row, BLUE);
+                    break;
+                    case CELL_PURPLE:
+                    drawSquare(col, row, PURPLE);
+                    break;
+                    case CELL_CYAN:
+                    drawSquare(col, row, CYAN);
+                    break;
+                    case CELL_ORANGE:
+                    drawSquare(col, row, ORANGE);
+                    break;
+                    case CELL_YELLOW:
+                    drawSquare(col, row, YELLOW);
+                    break;
+                }
             }
         }
     }
@@ -332,9 +377,9 @@ void drawBoard(){
 void render(){
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
-    drawGrid();
     drawBoard();
     drawCurrentPiece();
+    drawGrid();
     SwapBuffers(CLIENT_AREA_HANDLE);
 }
 

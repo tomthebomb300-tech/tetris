@@ -9,6 +9,13 @@ typedef enum gameState {
 
 typedef enum cellState{
     CELL_EMPTY,
+    CELL_RED,
+    CELL_GREEN,
+    CELL_BLUE,
+    CELL_PURPLE,
+    CELL_CYAN,
+    CELL_ORANGE,
+    CELL_YELLOW,
     CELL_OCCUPIED
 } CELLSTATE;
 
@@ -28,6 +35,12 @@ typedef enum keyDown{
     DOWN
 } KEYDOWN;
 
+typedef struct colour{
+    float red;
+    float green;
+    float blue;
+} Colour;
+
 typedef struct coordinates{
     int x;
     int y;
@@ -35,6 +48,8 @@ typedef struct coordinates{
 
 typedef struct piece{
     int rotations[4];
+    Colour colour;
+    CELLSTATE cellState;
 } Piece;
 
 typedef struct currentPiece{
@@ -49,11 +64,12 @@ typedef struct board {
     CurrentPiece currPiece;
     int rows;
     int cols;
-    int **cells;
+    CELLSTATE **cells;
 } Board;
 
 typedef struct game {
     Piece *pieces;
+    Colour *colours;
     int numPieces;
     GAMESTATE state;
     Board board;
