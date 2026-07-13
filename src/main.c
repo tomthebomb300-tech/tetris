@@ -258,6 +258,34 @@ void moveRight(){
     }
 }
 
+void rotate(){     
+    //Adjusting tetris piece in relation to the rotation choice.
+    CurrentPiece currPiece = game->board.currPiece;
+    int index = 0;
+    int idx = 0;
+    for(int row = 0; row < 4; row++){
+        for(int col = 0; col < 4; col++){
+            int shiftBit = row*4+col;
+            if(currPiece.piece.rotations[currPiece.rotation] & (0b1000000000000000 >> shiftBit)){
+                Coordinates c = {.x = row, .y = col};
+                if(leftWallCollision(c.x + game->board.currPiece.drawOrigin.x)){
+                    game->board.currPiece.drawOrigin.x++;
+                }
+                if(rightWallCollision(c.x + game->board.currPiece.drawOrigin.x)){
+                    game->board.currPiece.drawOrigin.x--;
+                }
+                if(layerCollision(c.x + game->board.currPiece.drawOrigin.x, c.y + game->board.currPiece.drawOrigin.y)){
+                        if(game->board.currPiece.rotation == 0){game->board.currPiece.rotation = 3;}
+                        else{game->board.currPiece.rotation--;}
+                        rotate();
+                        return;
+                }
+                game->board.currPiece.coords[index++] = c;
+            }
+        }
+    }
+}
+
 void checkFullRow(){
     int rowsCleared = 0;
     for(int row = 0; row < game->board.rows; row++){
@@ -291,12 +319,8 @@ void update(){
     }
     if(key_down[UP]){
         key_down[UP]=0;
-        if(game->board.currPiece.rotation == 3){
-            game->board.currPiece.rotation = 0;
-        }
-        else{
-            game->board.currPiece.rotation++;
-        }
+        if(game->board.currPiece.rotation == 3){game->board.currPiece.rotation = 0;}
+        else{game->board.currPiece.rotation++;}
     }
     if(key_down[RIGHT]){
         key_down[RIGHT]=0;
@@ -307,24 +331,7 @@ void update(){
         moveLeft();
     }
     
-    //Adjusting tetris piece in relation to the rotation choice.
-    CurrentPiece currPiece = game->board.currPiece;
-    int index = 0;
-    for(int row = 0; row < 4; row++){
-        for(int col = 0; col < 4; col++){
-            int shiftBit = row*4+col;
-            if(currPiece.piece.rotations[currPiece.rotation] & (0b1000000000000000 >> shiftBit)){
-                Coordinates c = {.x = row, .y = col};
-                if(leftWallCollision(c.x + game->board.currPiece.drawOrigin.x)){
-                    game->board.currPiece.drawOrigin.x++;
-                }
-                if(rightWallCollision(c.x + game->board.currPiece.drawOrigin.x)){
-                    game->board.currPiece.drawOrigin.x--;
-                }
-                game->board.currPiece.coords[index++] = c;
-            }
-        }
-    }
+    rotate();
     
     if(!moveDown()){//if cant move down
         fixPieceToBoard();
