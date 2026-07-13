@@ -256,6 +256,33 @@ void moveRight(){
     }
 }
 
+void checkFullRow(){
+    int rowsCleared = 0;
+    for(int row = 0; row < game->board.rows; row++){
+        int fullRow = 1;
+        for(int col = 0; col < game->board.cols; col++){
+            if(game->board.cells[row][col] == CELL_EMPTY){
+                fullRow = 0;
+                break;
+            }           
+        }
+
+        if(fullRow){
+            //Empty the full row
+            for(int col = 0; col < game->board.cols; col++){
+                game->board.cells[row][col] = CELL_EMPTY;
+            }
+
+            //Copy each row above down
+            for(int rowIdx = row; rowIdx > 0; rowIdx--){
+                for(int col = 0; col < game->board.cols; col++){
+                    game->board.cells[rowIdx][col] = game->board.cells[rowIdx-1][col];
+                }
+            }
+        }
+    }
+}
+
 void update(){
     if(key_down[DOWN]){
         key_down[DOWN]=0;
@@ -299,6 +326,7 @@ void update(){
     
     if(!moveDown()){//if cant move down
         fixPieceToBoard();
+        checkFullRow();
         createNewPiece();
     }
 }
