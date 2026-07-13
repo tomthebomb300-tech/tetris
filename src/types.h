@@ -15,8 +15,7 @@ typedef enum cellState{
     CELL_PURPLE,
     CELL_CYAN,
     CELL_ORANGE,
-    CELL_YELLOW,
-    CELL_OCCUPIED
+    CELL_YELLOW
 } CELLSTATE;
 
 typedef enum collisionType{
@@ -25,7 +24,7 @@ typedef enum collisionType{
     BOTTOM_WALL,
     TOP_WALL,
     NONE,
-    LAYER
+    OCCUPIED_CELL
 } COLLISIONTYPE;
 
 typedef enum keyDown{

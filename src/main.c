@@ -223,7 +223,7 @@ COLLISIONTYPE collision(){
             return BOTTOM_WALL;
         }
         if(layerCollision(currPiece.drawOrigin.x + currPiece.coords[i].x, currPiece.drawOrigin.y + currPiece.coords[i].y)){
-            return LAYER;
+            return OCCUPIED_CELL;
         }
     }
     return NONE;
@@ -233,7 +233,7 @@ int moveDown(){
     if((GetTickCount() - game->lastMoveTime) >= 250){
         game->board.currPiece.drawOrigin.y++;
         COLLISIONTYPE collType = collision();
-        if(collType == BOTTOM_WALL || collType == LAYER){
+        if(collType == BOTTOM_WALL || collType == OCCUPIED_CELL){
             game->board.currPiece.drawOrigin.y--;
             return 0;
         }
@@ -244,14 +244,16 @@ int moveDown(){
 
 void moveLeft(){
     game->board.currPiece.drawOrigin.x--;
-    if(collision() == LEFT_WALL){
+    COLLISIONTYPE collType = collision();
+    if(collType == LEFT_WALL || collType == OCCUPIED_CELL){
         game->board.currPiece.drawOrigin.x++;   
     }
 }
 
 void moveRight(){
     game->board.currPiece.drawOrigin.x++;
-    if(collision() == RIGHT_WALL){
+    COLLISIONTYPE collType = collision();
+    if(collision() == RIGHT_WALL || collType == OCCUPIED_CELL){
         game->board.currPiece.drawOrigin.x--;   
     }
 }
