@@ -61,6 +61,7 @@ typedef struct currentPiece{
 typedef struct board {
     Piece nextPiece;
     CurrentPiece currPiece;
+    CurrentPiece hologram;
     CELLSTATE **cells;
     int rows;
     int cols;

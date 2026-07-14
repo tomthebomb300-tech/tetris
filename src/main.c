@@ -179,7 +179,9 @@ void fixPieceToBoard(){
     Coordinates drawOrigin = currPiece.drawOrigin;
     Coordinates *coords = currPiece.coords;
     for(int i = 0; i < 4; i++){
-        game->board.cells[drawOrigin.y + coords[i].y][drawOrigin.x + coords[i].x] = currPiece.piece.cellState;
+        if(drawOrigin.y + coords[i].y >= 0){
+            game->board.cells[drawOrigin.y + coords[i].y][drawOrigin.x + coords[i].x] = currPiece.piece.cellState;
+        }
     }
 }
 
@@ -326,6 +328,23 @@ void checkFullRow(){
     }
 }
 
+void updateHologram(){
+    game->board.hologram = game->board.currPiece;
+    while(1){
+        game->board.hologram.drawOrigin.y++;
+        for(int i = 0; i < 4; i++){
+            if(bottomWallCollision(game->board.hologram.drawOrigin.y + game->board.hologram.coords[i].y)){
+                game->board.hologram.drawOrigin.y--;
+                return;
+            }
+            if(layerCollision(game->board.hologram.drawOrigin.x + game->board.hologram.coords[i].x, game->board.hologram.drawOrigin.y + game->board.hologram.coords[i].y)){
+                game->board.hologram.drawOrigin.y--;
+                return;
+            }
+        }
+    }
+}
+
 void checkGameOver(){
     for(int col = 0; col < game->board.cols; col++){
         if(game->board.cells[0][col] != CELL_EMPTY){
@@ -351,7 +370,6 @@ void playing(){
         key_down[LEFT]=0;
         moveLeft();
     }
-    
     rotate();
     
     if(!moveDown()){//if cant move down
@@ -359,6 +377,7 @@ void playing(){
         checkFullRow();
         createNewPiece();
     }
+    updateHologram();
 
     checkGameOver();
 }
@@ -376,9 +395,9 @@ void update(){
     }
 }
 
-void drawSquare(int x, int y, Colour colour){
+void drawSquare(int x, int y, Colour colour, float transparent){
     if(y < 0){return;}
-    glColor3f(colour.red, colour.green, colour.blue);
+    glColor4f(colour.red, colour.green, colour.blue, transparent);
     glBegin(GL_QUADS);
     glVertex2f(x,     y);
     glVertex2f(x + 1, y);
@@ -391,7 +410,7 @@ void drawCurrentPiece(){
     for(int i = 0; i < 4; i++){
         Coordinates c = game->board.currPiece.coords[i];
         Coordinates drawOrigin = game->board.currPiece.drawOrigin;
-        drawSquare(drawOrigin.x + c.x, drawOrigin.y + c.y, game->board.currPiece.piece.colour);
+        drawSquare(drawOrigin.x + c.x, drawOrigin.y + c.y, game->board.currPiece.piece.colour, 1.0f);
     }
 }
 
@@ -419,32 +438,39 @@ void drawBoard(){
     for(int row = 0; row < numRows; row++){
         for(int col = 0; col < numCols; col++){
             if(game->board.cells[row][col] != CELL_EMPTY){
-                drawSquare(col, row, RED);
                 switch(game->board.cells[row][col]){
                     case CELL_RED:
-                    drawSquare(col, row, RED);
+                    drawSquare(col, row, RED, 1.0f);
                     break;
                     case CELL_GREEN:
-                    drawSquare(col, row, GREEN);
+                    drawSquare(col, row, GREEN, 1.0f);
                     break;
                     case CELL_BLUE:
-                    drawSquare(col, row, BLUE);
+                    drawSquare(col, row, BLUE, 1.0f);
                     break;
                     case CELL_PURPLE:
-                    drawSquare(col, row, PURPLE);
+                    drawSquare(col, row, PURPLE, 1.0f);
                     break;
                     case CELL_CYAN:
-                    drawSquare(col, row, CYAN);
+                    drawSquare(col, row, CYAN, 1.0f);
                     break;
                     case CELL_ORANGE:
-                    drawSquare(col, row, ORANGE);
+                    drawSquare(col, row, ORANGE, 1.0f);
                     break;
                     case CELL_YELLOW:
-                    drawSquare(col, row, YELLOW);
+                    drawSquare(col, row, YELLOW, 1.0f);
                     break;
                 }
             }
         }
+    }
+}
+
+void drawHologram(){
+        for(int i = 0; i < 4; i++){
+        Coordinates c = game->board.hologram.coords[i];
+        Coordinates drawOrigin = game->board.hologram.drawOrigin;
+        drawSquare(drawOrigin.x + c.x, drawOrigin.y + c.y, game->board.hologram.piece.colour, 0.3f);
     }
 }
 
@@ -453,6 +479,7 @@ void render(){
     glClear(GL_COLOR_BUFFER_BIT);
     drawBoard();
     drawCurrentPiece();
+    drawHologram();
     drawGrid();
     SwapBuffers(CLIENT_AREA_HANDLE);
 }
@@ -469,6 +496,9 @@ void setupGraphics(){
     glOrtho(0, game->board.cols, game->board.rows, 0, -1, 1); //Re-assign coords left, right, bottom, top, near, far
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 }
 
 
