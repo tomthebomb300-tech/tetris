@@ -127,6 +127,7 @@ void initializeGame(){
     game->state = GAME_STATE_PLAYING;
     game->score = 0;
     game->numPieces = 7;
+    game->moveDownInterval = 250;
 
     game->pieces = malloc(game->numPieces * sizeof(Piece));
     game->pieces[0] = PIECE_I;
@@ -169,7 +170,7 @@ void createNewPiece(){
         .piece = game->pieces[random],
     };
     game->board.currPiece = currPiece;
-    Coordinates drawOrigin = {.x = 0, .y = 0};
+    Coordinates drawOrigin = {.x = 3, .y = -4};
     game->board.currPiece.drawOrigin = drawOrigin;
 }
 
@@ -204,6 +205,9 @@ int bottomWallCollision(int y){
 }
 
 int layerCollision(int y, int x){
+    if(x < 0){
+        return 0;
+    }
     if(game->board.cells[x][y] != CELL_EMPTY){
         return 1;
     }
@@ -230,7 +234,7 @@ COLLISIONTYPE collision(){
 }
 
 int moveDown(){
-    if((GetTickCount() - game->lastMoveTime) >= 250){
+    if((GetTickCount() - game->lastMoveTime) >= game->moveDownInterval){
         game->board.currPiece.drawOrigin.y++;
         COLLISIONTYPE collType = collision();
         if(collType == BOTTOM_WALL || collType == OCCUPIED_CELL){
@@ -240,6 +244,14 @@ int moveDown(){
         game->lastMoveTime = GetTickCount();
     }
     return 1;
+}
+
+void fastDrop(){
+    game->moveDownInterval = 25;
+}
+
+void regularDrop(){
+    game->moveDownInterval = 250;
 }
 
 void moveLeft(){
@@ -275,16 +287,17 @@ void rotate(){
                     game->board.currPiece.drawOrigin.x--;
                 }
                 if(layerCollision(c.x + game->board.currPiece.drawOrigin.x, c.y + game->board.currPiece.drawOrigin.y)){
-                        if(game->board.currPiece.rotation == 0){game->board.currPiece.rotation = 3;}
-                        else{game->board.currPiece.rotation--;}
-                        rotate();
-                        return;
+                    if(game->board.currPiece.rotation == 0){game->board.currPiece.rotation = 3;}
+                    else{game->board.currPiece.rotation--;}
+                    rotate();
+                    return;
                 }
                 game->board.currPiece.coords[index++] = c;
             }
         }
     }
 }
+
 
 void checkFullRow(){
     int rowsCleared = 0;
@@ -315,8 +328,8 @@ void checkFullRow(){
 
 void update(){
     if(key_down[DOWN]){
-        key_down[DOWN]=0;
-    }
+        fastDrop();
+    }else{regularDrop();}
     if(key_down[UP]){
         key_down[UP]=0;
         if(game->board.currPiece.rotation == 3){game->board.currPiece.rotation = 0;}
@@ -341,6 +354,9 @@ void update(){
 }
 
 void drawSquare(int x, int y, Colour colour){
+    if(y < 0){
+        return;
+    }
     glColor3f(colour.red, colour.green, colour.blue);
     glBegin(GL_QUADS);
     glVertex2f(x,     y);
@@ -443,6 +459,12 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam){
             else if(wParam == VK_RIGHT){key_down[RIGHT]=1;}
             else if(wParam == VK_LEFT){key_down[LEFT]=1;}
             break;
+        case WM_KEYUP:
+            if(wParam == VK_DOWN){key_down[DOWN]=0;}
+            else if(wParam == VK_UP){key_down[UP]=0;}
+            else if(wParam == VK_RIGHT){key_down[RIGHT]=0;}
+            else if(wParam == VK_LEFT){key_down[LEFT]=0;}
+        break;
         case WM_CLOSE:
             DestroyWindow(hwnd);
             break;

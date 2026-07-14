@@ -53,27 +53,28 @@ typedef struct piece{
 
 typedef struct currentPiece{
     Piece piece;
-    int rotation;           //Current orientation of piece.
     Coordinates drawOrigin; //Origin of where the piece is drawen from.
     Coordinates coords[4];  //Coordinates of piece in relation to drawOrgin
+    int rotation;           //Current orientation of piece.
 } CurrentPiece;
 
 typedef struct board {
     Piece nextPiece;
     CurrentPiece currPiece;
+    CELLSTATE **cells;
     int rows;
     int cols;
-    CELLSTATE **cells;
 } Board;
 
 typedef struct game {
     Piece *pieces;
-    Colour *colours;
-    int numPieces;
     GAMESTATE state;
+    Colour *colours;
     Board board;
-    int score;
     DWORD lastMoveTime;
+    int numPieces;
+    int score;
+    int moveDownInterval;
 } Game;
 
 #endif
