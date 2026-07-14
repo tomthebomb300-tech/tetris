@@ -326,9 +326,17 @@ void checkFullRow(){
     }
 }
 
-void update(){
+void checkGameOver(){
+    for(int col = 0; col < game->board.cols; col++){
+        if(game->board.cells[0][col] != CELL_EMPTY){
+            game->state = GAME_STATE_OVER;
+        }
+    }
+}
+
+void playing(){
     if(key_down[DOWN]){
-        fastDrop();
+    fastDrop();
     }else{regularDrop();}
     if(key_down[UP]){
         key_down[UP]=0;
@@ -351,12 +359,25 @@ void update(){
         checkFullRow();
         createNewPiece();
     }
+
+    checkGameOver();
+}
+
+void gameOver(){
+    printf("Game Over\n");
+}
+
+void update(){
+    if(game->state == GAME_STATE_PLAYING){
+        playing();
+    }
+    if(game->state == GAME_STATE_OVER){
+        gameOver();
+    }
 }
 
 void drawSquare(int x, int y, Colour colour){
-    if(y < 0){
-        return;
-    }
+    if(y < 0){return;}
     glColor3f(colour.red, colour.green, colour.blue);
     glBegin(GL_QUADS);
     glVertex2f(x,     y);
