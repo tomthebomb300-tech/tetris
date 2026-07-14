@@ -31,7 +31,9 @@ typedef enum keyDown{
     RIGHT,
     LEFT,
     UP,
-    DOWN
+    DOWN,
+    ESC,
+    ENTER
 } KEYDOWN;
 
 typedef struct colour{

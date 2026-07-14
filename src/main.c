@@ -123,6 +123,13 @@ void printBoard(){
 }
 
 void initializeGame(){
+    key_down[RIGHT] = 0;
+    key_down[LEFT] = 0;
+    key_down[UP] = 0;
+    key_down[DOWN] = 0;
+    key_down[ESC] = 0;
+    key_down[ENTER] = 0;
+
     game = malloc(sizeof(Game));
     game->state = GAME_STATE_PLAYING;
     game->score = 0;
@@ -370,6 +377,10 @@ void playing(){
         key_down[LEFT]=0;
         moveLeft();
     }
+    if(key_down[ESC]){
+        key_down[ESC]=0;
+        game->state = GAME_STATE_PAUSED;
+    }
     rotate();
     
     if(!moveDown()){//if cant move down
@@ -386,12 +397,22 @@ void gameOver(){
     printf("Game Over\n");
 }
 
+void paused(){
+    if(key_down[ESC]){
+        key_down[ESC]=0;
+        game->state = GAME_STATE_PLAYING;
+    }
+}
+
 void update(){
     if(game->state == GAME_STATE_PLAYING){
         playing();
     }
     if(game->state == GAME_STATE_OVER){
         gameOver();
+    }
+    if(game->state == GAME_STATE_PAUSED){
+        paused();
     }
 }
 
@@ -509,6 +530,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam){
             else if(wParam == VK_UP){key_down[UP]=1;}
             else if(wParam == VK_RIGHT){key_down[RIGHT]=1;}
             else if(wParam == VK_LEFT){key_down[LEFT]=1;}
+            else if(wParam == VK_ESCAPE){key_down[ESC]=1;}
+            else if(wParam == VK_RETURN){key_down[ENTER]=1;}
             break;
         case WM_KEYUP:
             if(wParam == VK_DOWN){key_down[DOWN]=0;}
