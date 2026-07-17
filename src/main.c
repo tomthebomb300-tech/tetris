@@ -10,8 +10,9 @@ HDC CLIENT_AREA_HANDLE;
 const int CELL_SIZE = 50;
 const int BOARD_ROWS = 20;
 const int BOARD_COLS = 10;
+const int HUD_WIDTH = CELL_SIZE * 6;
 const int CLIENT_AREA_HEIGHT = BOARD_ROWS * CELL_SIZE; //Height of client area
-const int CLIENT_AREA_WIDTH = BOARD_COLS * CELL_SIZE;  //Width of client area
+const int CLIENT_AREA_WIDTH = (BOARD_COLS * CELL_SIZE) + HUD_WIDTH;  //Width of client area
 const int WINDOW_HEIGHT = CLIENT_AREA_HEIGHT + 20; //Window width to get desired client area
 const int WINDOW_WIDTH = CLIENT_AREA_WIDTH + 43; //Window height to get desired client area
 
@@ -33,7 +34,7 @@ Piece PIECE_O = {
         0b0000011001100000,
         0b0000011001100000,
         0b0000011001100000,
-        0b0000011001100000
+        0b0000011001100000,
     },
     .colour = RED,
     .cellState = CELL_RED
@@ -41,10 +42,10 @@ Piece PIECE_O = {
 
 Piece PIECE_I = {
     .rotations = {
+        0b0100010001000100,
         0b0000111100000000,
         0b0010001000100010,
         0b0000000011110000,
-        0b0100010001000100
     },
     .colour = GREEN,
     .cellState = CELL_GREEN
@@ -55,7 +56,7 @@ Piece PIECE_S = {
         0b0000011011000000,
         0b0000010001100010,
         0b0000011011000000,
-        0b0000010001100010
+        0b0000010001100010,
     },
     .colour = BLUE,
     .cellState = CELL_BLUE
@@ -66,7 +67,7 @@ Piece PIECE_Z = {
         0b0000011000110000,
         0b0000001001100100,
         0b0000011000110000,
-        0b0000001001100100
+        0b0000001001100100,
     },
     .colour = PURPLE,
     .cellState = CELL_PURPLE
@@ -74,10 +75,10 @@ Piece PIECE_Z = {
 
 Piece PIECE_L = {
     .rotations = {
+        0b0000001011100000,
         0b0100010001100000,
         0b0000011101000000,
         0b0000011000100010,
-        0b0000001011100000
     },
     .colour = CYAN,
     .cellState = CELL_CYAN
@@ -85,10 +86,10 @@ Piece PIECE_L = {
 
 Piece PIECE_J = {
     .rotations = {
+        0b0000111000100000,
         0b0010001001100000,
         0b0000010001110000,
         0b0000011001000100,
-        0b0000111000100000
     },
     .colour = ORANGE,
     .cellState = CELL_ORANGE
@@ -171,14 +172,14 @@ void destroyGame(){
 }
 
 void createNewPiece(){
-    int random = rand()%game->numPieces;
     CurrentPiece currPiece = {
         .rotation = 0,
-        .piece = game->pieces[random],
+        .piece = game->board.nextPiece,
     };
     game->board.currPiece = currPiece;
     Coordinates drawOrigin = {.x = 3, .y = -4};
     game->board.currPiece.drawOrigin = drawOrigin;
+    game->board.nextPiece = game->pieces[rand()%game->numPieces];
 }
 
 void fixPieceToBoard(){
@@ -283,7 +284,6 @@ void rotate(){
     //Adjusting tetris piece in relation to the rotation choice.
     CurrentPiece currPiece = game->board.currPiece;
     int index = 0;
-    int idx = 0;
     for(int row = 0; row < 4; row++){
         for(int col = 0; col < 4; col++){
             int shiftBit = row*4+col;
@@ -320,6 +320,7 @@ void checkFullRow(){
         }
 
         if(fullRow){
+            rowsCleared++;
             //Empty the full row
             for(int col = 0; col < game->board.cols; col++){
                 game->board.cells[row][col] = CELL_EMPTY;
@@ -333,6 +334,7 @@ void checkFullRow(){
             }
         }
     }
+    game->score = game->score + rowsCleared;
 }
 
 void updateHologram(){
@@ -394,7 +396,7 @@ void playing(){
 }
 
 void gameOver(){
-    printf("Game Over\n");
+    printf("Game Over Score = %d\n", game->score);
 }
 
 void paused(){
@@ -405,15 +407,9 @@ void paused(){
 }
 
 void update(){
-    if(game->state == GAME_STATE_PLAYING){
-        playing();
-    }
-    if(game->state == GAME_STATE_OVER){
-        gameOver();
-    }
-    if(game->state == GAME_STATE_PAUSED){
-        paused();
-    }
+    if(game->state == GAME_STATE_PLAYING){playing();}
+    if(game->state == GAME_STATE_OVER){gameOver();}
+    if(game->state == GAME_STATE_PAUSED){paused();}
 }
 
 void drawSquare(int x, int y, Colour colour, float transparent){
@@ -428,6 +424,27 @@ void drawSquare(int x, int y, Colour colour, float transparent){
 }
 
 void drawCurrentPiece(){
+    for(int i = 0; i < 4; i++){
+        Coordinates c = game->board.currPiece.coords[i];
+        Coordinates drawOrigin = game->board.currPiece.drawOrigin;
+        drawSquare(drawOrigin.x + c.x, drawOrigin.y + c.y, game->board.currPiece.piece.colour, 1.0f);
+    }
+}
+
+void drawNextPiece(){
+    Piece nextPiece = game->board.nextPiece;
+    int index = 0;
+    int idx = 0;
+    for(int row = 0; row < 4; row++){
+        for(int col = 0; col < 4; col++){
+            int shiftBit = row*4+col;
+            if(nextPiece.rotations[0] & (0b1000000000000000 >> shiftBit)){
+                Coordinates c = {.x = row, .y = col};
+                drawSquare(11 + c.x, 5 + c.y, nextPiece.colour, 1.0f);
+            }
+        }
+    }
+
     for(int i = 0; i < 4; i++){
         Coordinates c = game->board.currPiece.coords[i];
         Coordinates drawOrigin = game->board.currPiece.drawOrigin;
@@ -500,6 +517,7 @@ void render(){
     glClear(GL_COLOR_BUFFER_BIT);
     drawBoard();
     drawCurrentPiece();
+    drawNextPiece();
     drawHologram();
     drawGrid();
     SwapBuffers(CLIENT_AREA_HANDLE);
@@ -514,7 +532,7 @@ void setupGraphics(){
 
     glMatrixMode(GL_PROJECTION); //Telling openGL next lines affect projection matrix.
     glLoadIdentity();
-    glOrtho(0, game->board.cols, game->board.rows, 0, -1, 1); //Re-assign coords left, right, bottom, top, near, far
+    glOrtho(0, game->board.cols+6, game->board.rows, 0, -1, 1); //Re-assign coords left, right, bottom, top, near, far
     glMatrixMode(GL_MODELVIEW);
     glLoadIdentity();
 
@@ -601,6 +619,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     initializeGame();
     setupGraphics();
+    game->board.nextPiece = game->pieces[rand()%game->numPieces];
     createNewPiece();
 
 
