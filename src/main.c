@@ -395,7 +395,14 @@ void playing(){
 }
 
 void gameOver(){
-    printf("Game Over Score = %d\n", game->score);
+    if(key_down[ENTER]){
+        key_down[ENTER]=0;
+        destroyGame();
+        initializeGame();
+        game->board.nextPiece = game->pieces[rand()%game->numPieces];
+        createNewPiece();
+        game->state = GAME_STATE_PLAYING;
+    }
 }
 
 void paused(){
@@ -536,6 +543,15 @@ void render(){
     char score_text[32];
     sprintf(score_text, "Score: %d", game->score);
     drawText(11.5f, 5.0f, score_text);
+    if(game->state == GAME_STATE_PAUSED){
+        drawText(10.5f, 2.0f, "Paused 'ESC'");
+    }
+    if(game->state == GAME_STATE_OVER){
+        drawText(11.0f, 2.0f, "Game Over");
+        drawText(11.5f, 3.0f, "'ENTER'");
+        
+    }
+    
     SwapBuffers(CLIENT_AREA_HANDLE);
 }
 
