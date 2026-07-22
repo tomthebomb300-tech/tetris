@@ -18,7 +18,8 @@ const int WINDOW_WIDTH = CLIENT_AREA_WIDTH + 43; //Window height to get desired 
 
 
 Game *game;
-int key_down[sizeof(KEYDOWN)];
+int key_down[6];
+GLuint fontBase;
 
 const Colour RED = {255.0f/255.0f,0,0};
 const Colour GREEN = {0,255.0f/255.0f,0};
@@ -363,9 +364,7 @@ void checkGameOver(){
 }
 
 void playing(){
-    if(key_down[DOWN]){
-    fastDrop();
-    }else{regularDrop();}
+    if(key_down[DOWN]){fastDrop();}else{regularDrop();}
     if(key_down[UP]){
         key_down[UP]=0;
         if(game->board.currPiece.rotation == 3){game->board.currPiece.rotation = 0;}
@@ -440,7 +439,7 @@ void drawNextPiece(){
             int shiftBit = row*4+col;
             if(nextPiece.rotations[0] & (0b1000000000000000 >> shiftBit)){
                 Coordinates c = {.x = row, .y = col};
-                drawSquare(11 + c.x, 5 + c.y, nextPiece.colour, 1.0f);
+                drawSquare(11 + c.x, 10 + c.y, nextPiece.colour, 1.0f);
             }
         }
     }
@@ -512,6 +511,19 @@ void drawHologram(){
     }
 }
 
+void drawText(float x, float y, const char *text){
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glRasterPos2f(x, y);
+
+    glListBase(fontBase - 32);
+
+    glCallLists(
+        strlen(text),
+        GL_UNSIGNED_BYTE,
+        text
+    );
+}
+
 void render(){
     glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
@@ -520,6 +532,10 @@ void render(){
     drawNextPiece();
     drawHologram();
     drawGrid();
+
+    char score_text[32];
+    sprintf(score_text, "Score: %d", game->score);
+    drawText(11.5f, 5.0f, score_text);
     SwapBuffers(CLIENT_AREA_HANDLE);
 }
 
@@ -538,6 +554,30 @@ void setupGraphics(){
 
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+}
+
+void createFont(){
+    HFONT font = CreateFontA(
+        48,                 // Height in pixels
+        0,                  // Width (auto)
+        0,
+        0,
+        FW_BOLD,            // Bold font
+        FALSE,
+        FALSE,
+        FALSE,
+        ANSI_CHARSET,
+        OUT_TT_PRECIS,
+        CLIP_DEFAULT_PRECIS,
+        ANTIALIASED_QUALITY,
+        FF_DONTCARE | DEFAULT_PITCH,
+        "Arial"
+    );
+    HFONT oldFont = (HFONT)SelectObject(CLIENT_AREA_HANDLE, font);
+    fontBase = glGenLists(96);
+    wglUseFontBitmapsA(CLIENT_AREA_HANDLE, 32, 96, fontBase);
+    SelectObject(CLIENT_AREA_HANDLE, oldFont);
+    DeleteObject(font);
 }
 
 
@@ -619,9 +659,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine
 
     initializeGame();
     setupGraphics();
+    createFont();
     game->board.nextPiece = game->pieces[rand()%game->numPieces];
     createNewPiece();
-
 
     int run = 1;
     while(run){
